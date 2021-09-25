@@ -38,7 +38,7 @@ First lets cd to the mounted usb device
 And download files there
 
     wget http://ftp.debian.org/debian/dists/stable/main/installer-armel/current/images/kirkwood/device-tree/kirkwood-iomega_ix2_200.dtb
-    wget http://ftp.debian.org/debian/dists/stable/main/installer-armel/current/images/kirkwood/netboot/vmlinuz-4.19.0-6-marvell
+    wget http://ftp.debian.org/debian/dists/stable/main/installer-armel/current/images/kirkwood/netboot/vmlinuz-5.10.0-8-marvell
     wget http://ftp.debian.org/debian/dists/stable/main/installer-armel/current/images/kirkwood/netboot/initrd.gz
 
 # 3. Build U-boot files
@@ -46,7 +46,7 @@ And download files there
 iomega has a realy old u-boot that does not support seperate device tree files.
 We will append device tree dtb file end of the kernel images
 
-    cat vmlinuz-4.19.0-6-marvell kirkwood-iomega_ix2_200.dtb > vmlinuz_with_dtb
+    cat vmlinuz-5.10.0-8-marvell kirkwood-iomega_ix2_200.dtb > vmlinuz_with_dtb
 
 then we have to wrap the kernel and initrd into u-boot image files
 
@@ -106,6 +106,13 @@ bootm 0x00800000 0x01A00000
 Those memory addresses are pretty random, you can use `memlayout.py` script to calculate those values. Memory base should be at 0x0.
 At least thats what is written into the [Device Tree](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm/boot/dts/kirkwood-iomega_ix2_200.dts?h=v4.19)
 
+setenv serverip 192.168.43.100
+setenv ipaddr 192.168.43.21
+tftpboot 0x00800000 uImage
+tftpboot 0x01A00000 uInitrd
+setenv bootargs console=ttyS0,115200
+bootm 0x00800000 0x01A00000
+
 # 6. Install debian like normal
 U-Boot on the ix2-200 only understands **DOS/MBR** partiton tables, GPT will not work. Some hacish protected MBR GPT hybrid might also work but thats untested!
 
@@ -151,8 +158,11 @@ If you can see uImage and uInitrd then you can try to boot them
 
     ext2load ide 0:1 0x00800000 /uImage
     ext2load ide 0:1 0x01A00000 /uInitrd
-    setenv bootargs console=ttyS0,115200 root=/dev/<device>
+    setenv bootargs console=ttyS0,115200 root=/dev/sda5
     bootm 0x00800000 0x01A00000
+    
+    setenv bootargs console=ttyS0,115200 root=/dev/ix2-vg/root
+
 
 If it booted then you can follow with next step
 
@@ -162,6 +172,10 @@ in u-boot prompt
 
     setenv loadfiles 'ide reset; ext2load ide 0:1 0x00800000 /uImage; ext2load ide 0:1 0x01A00000 /uInitrd'
     setenv bootargs console=ttyS0,115200 root=/dev/<device>
+    setenv bootcmd 'run loadfiles; bootm 0x00800000 0x01A00000'
+    
+    setenv loadfiles 'ide reset; ext2load ide 0:1 0x00800000 /uImage; ext2load ide 0:1 0x01A00000 /uInitrd'
+    setenv bootargs console=ttyS0,115200 root=/dev/ix2-vg/root
     setenv bootcmd 'run loadfiles; bootm 0x00800000 0x01A00000'
 
 And thest if those commands work
